@@ -7,7 +7,9 @@ V repozitári sa zároveň nachádza script `presetup.sh`, pomocou ktorého je m
 
 Skript zároveň nakopíruje do domovského adresára uživateľa `/home/pi` súbor `rpisetup.sh` ktorý slúži k nainštalovanie iných požadovaných aplikácii ako je napríklad docker.
 
-Návod na použitie `presetup.sh` scriptu:
+Návod na použitie `presetup.sh` scriptu 
+
+**PO PUŽTÍ JE POTREBNÉ BEZPEČNE ODSTRÁNIŤ PRIPOJENÝ DISK**:
 ```
 presetup.sh BOOT_DIR ROOT_DIR
     BOOT_DIR - mountpoint of RPi boot sector 
