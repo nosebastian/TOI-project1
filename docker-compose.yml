@@ -1,0 +1,8 @@
+version: '3.4'
+
+services:
+  toiproject1:
+    image: toiproject1
+    build:
+      context: .
+      dockerfile: ./Dockerfile
