@@ -78,9 +78,6 @@ dhcp-range='$ADDR_START','$ADDR_END$',255.255.255.0,24h
 domain=wlan     # Local wireless DNS domain
 address=/gw.wlan/10.10.0.1
                 # Alias for this router
-server=8.8.8.8
-server=8.8.4.4
-listen-address=::1,127.0.0.1,10.10.0.1
 '
         echo "$DNSMASQ" | sudo tee /etc/dnsmasq.conf
         HOSTAPD=$'

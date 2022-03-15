@@ -10,6 +10,7 @@ sdkconfig.*
 .pio
 piobuild
 c_cpp_properties.json
+launch.json
 
 # Distribution / packaging
 .Python
