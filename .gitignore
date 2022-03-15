@@ -9,6 +9,7 @@ CMakeLists.txt
 sdkconfig.*
 .pio
 piobuild
+c_cpp_properties.json
 
 # Distribution / packaging
 .Python
