@@ -1,4 +1,4 @@
-# TOI Project 1 - ESP + Raspberry Pi 
+# **TOI Project 1 - ESP + Raspberry Pi**
 Internet-of-thing zariadenie merajúce teplotu a svetlo založené na ESP32. Zariadenie komunikuje pomocou MQTT. Raspberry pi je využívané ako MQQT broker a zároveň ako gataway pre prístup na server založený na [thingsboard.io](https://thingsboard.io/). Možno niekedy bude aj GUI.
 
 # Setup
@@ -32,8 +32,23 @@ ip.sh forward-on|forward-off|ip-on|ip-off DEVICE
 ```
 
 ## Raspberry Pi inštalácia **Docker**
-Pre inštaláciu docker je možné využit priložený ;*convenience* script ktorý sa nachádza pod `rpiscripts/rpisetup.sh`, skript bude v domovskom adresáry pokiaľ bol využítý predchádzajúci krok. Inak je potrebné tento script na raspberry pi skopírovať napríklad pomocou `scp`. Následne postačuje script spustiť `./rpisetup.sh 1|2`, kde je možné vybrať z dvoch inštalačných fáz.
-V prvej fáze sa nainštaluje `docker` a `docker-compose`, Raspberry Pi sa následne reštartuje. V druhej fáze prebieha nastavenie praconvého prostredia aplikácií a teda **MQTT broker** a **Python**.
+Pre inštaláciu docker je možné využit priložený ;*convenience* script ktorý sa nachádza pod `rpiscripts/rpisetup.sh`, skript bude v domovskom adresáry pokiaľ bol využítý predchádzajúci krok. Inak je potrebné tento script na raspberry pi skopírovať napríklad pomocou `scp`. Následne postačuje script spusti:
+```
+./rpisetup.sh install|docker|hotspot
+    install - install docker, docker compose and reboot
+    docker - setup docker environment
+    hotspot - setup hostspot
+```
+Je možné vybrať z troch inštalačných fáz.
+V prvej fáze sa nainštaluje `docker` a `docker-compose`, Raspberry Pi sa následne reštartuje. V druhej fáze prebieha nastavenie praconvého prostredia docker pre **MQTT broker** a **Python**. Posledná možnosť slúži na vytvorenie hotspotu, po zvolení tento možnosti sa rpi reštartuje a defaut konfigurácia hotspotu bude:
+```
+dhcp-range=10.10.0.2,10.10.0.20,255.255.255.0
+gateway=10.10.0.1
+ssid=rpiIotGateway
+wpa_passphrase=abcdefgh
+wpa_key_mgmt=WPA-PSK
+wpa=2
+```
 
 ## ESP **PlatformIO**
 
