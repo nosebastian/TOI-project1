@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# ORIGINAL AUTHOR: Ben HardillCategories
+# AUTHOR: Ben Hardill
 # SOURCED FROM: https://www.hardill.me.uk/wordpress/2019/11/02/pi4-usb-c-gadget/
 # POSTED ON: 2nd November 2019
 
