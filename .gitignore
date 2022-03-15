@@ -5,6 +5,10 @@ __pycache__/
 
 # C extensions
 *.so
+CMakeLists.txt
+sdkconfig.*
+.pio
+piobuild
 
 # Distribution / packaging
 .Python
