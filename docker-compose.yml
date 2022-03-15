@@ -6,3 +6,10 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
+    depends_on:
+      - mosquitto
+  mosquitto:
+    image: eclipse-mosquitto:1.6
+    ports:
+      - 1883:1883
+      - 9001:9001

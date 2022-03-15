@@ -37,6 +37,9 @@ then
         docker compose version
         echo "SETUP REPOSITORY"
         git clone https://github.com/marekkles/TOI-project1.git
+        cd TOI-project1
+        docker compose build
+        docker compose up -d
         #TODO AUTO SETUP
     else
         echo "Unknown option use:\n" >&2
