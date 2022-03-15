@@ -50,10 +50,11 @@ then
         SSID="rpiIotGateway"
         PASS="abcdefgh"
 
-        sudo apt install hostapd
+        sudo rfkill unblock wlan
+        sudo apt install hostapd -y
         sudo systemctl unmask hostapd
         sudo systemctl enable hostapd
-        sudo apt install dnsmasq
+        sudo apt install dnsmasq -y
         sudo DEBIAN_FRONTEND=noninteractive apt install -y netfilter-persistent iptables-persistent
 
         WLAN0_DHCPCD=$'
@@ -77,11 +78,13 @@ dhcp-range='$ADDR_START','$ADDR_END$',255.255.255.0,24h
 domain=wlan     # Local wireless DNS domain
 address=/gw.wlan/10.10.0.1
                 # Alias for this router
+server=8.8.8.8
+server=8.8.4.4
+listen-address=::1,127.0.0.1,10.10.0.1
 '
         echo "$DNSMASQ" | sudo tee /etc/dnsmasq.conf
-        sudo rfkill unblock wlan
         HOSTAPD=$'
-country_code=CZ
+country_code=GB
 interface=wlan0
 ssid='$SSID$'
 hw_mode=g
