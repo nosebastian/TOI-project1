@@ -56,7 +56,6 @@ then
         cd TOI-project1
         docker compose build
         docker compose up -d
-        #TODO AUTO SETUP
     elif [ $1 == hotspot ]; then
         echo "Setup hotspot"
 
