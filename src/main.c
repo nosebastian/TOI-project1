@@ -6,7 +6,7 @@
 -----------------------*/
 
 /* NOTES --------------
-  * 4k7 resistor (DS18B20 & photoresistor)
+  * 10k resistor (DS18B20 & photoresistor)
   * PR on pin 34 (ADC1)
   * DS on pin 4
 -----------------------*/
@@ -28,21 +28,29 @@
 #include "driver/adc.h"
 #include "esp_adc_cal.h"
 
-#define GPIO_DS18B20_0      4
-#define MAX_DEVICES         8
-#define DS18B20_RESOLUTION  DS18B20_RESOLUTION_12_BIT
-#define SAMPLE_PERIOD       1000   // milliseconds
-#define GPIO_PHOTORESISTOR  2
-
-// ADC vars and consts
-#define DEFAULT_VREF    1100        //Use adc2_vref_to_gpio() to obtain a better estimate
-#define NO_OF_SAMPLES   64          //Multisampling
+#include "wifi.h"
+#include "firmware.h"
+//#include "esp-now-lib.h"
 
 static esp_adc_cal_characteristics_t *adc_chars;
 static const adc_channel_t channel = ADC_CHANNEL_6;     //GPIO34 if ADC1, GPIO14 if ADC2
-static const adc_bits_width_t width = ADC_WIDTH_BIT_12;
-static const adc_atten_t atten = ADC_ATTEN_DB_6;      // ADC_ATTEN_DB_6, ADC_ATTEN_DB_11
+static const adc_bits_width_t width = ADC_WIDTH_BIT_10;
+static const adc_atten_t atten = ADC_ATTEN_DB_11;       // ADC_ATTEN_DB_2_5, ADC_ATTEN_DB_6, ADC_ATTEN_DB_11, ADC_ATTEN_MAX
 static const adc_unit_t unit = ADC_UNIT_1;
+
+// Shared data variables
+int light_intensity = 0;
+float temperature = 0.0f;
+
+int raw_to_lumens(int raw){
+    uint32_t vout = esp_adc_cal_raw_to_voltage(raw, adc_chars);
+
+    float RLDR = (R * (VIN - vout))/vout;
+
+    int lumens = 500/(RLDR/1000);
+
+    return lumens;
+}
 
 static void check_efuse(void)
 {
@@ -85,19 +93,15 @@ void light_intensity_task(void *pvParameter)
             }
         }
         adc_reading /= NO_OF_SAMPLES;
+
+        light_intensity = raw_to_lumens(adc_reading); // TODO transform to lumens
+        //light_intensity = adc_reading;
+        
         //Convert adc_reading to voltage in mV
         uint32_t voltage = esp_adc_cal_raw_to_voltage(adc_reading, adc_chars);
-        printf("Raw: %d\tVoltage: %dmV\n", adc_reading, voltage);
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
-}
 
-void hello_task(void *pvParameter)
-{
-    printf("Hello world!\n");
-    for (int i = 1; 1 ; i++) {
-        printf("Running %d seconds...\n", i);
-        vTaskDelay(1000 / portTICK_RATE_MS);
+        printf("Raw: %d\tVoltage: %dmV\n", adc_reading, voltage);
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
     }
 }
 
@@ -162,7 +166,7 @@ void onewire_task(void *pvParameter)
     // Read temperatures from all sensors sequentially
     while (1)
     {
-        ESP_LOGI("one-wire", "Temperature readings (degrees C):");
+        //ESP_LOGI("one-wire", "Temperature readings (degrees C):");
         ds18b20_convert_all(owb);
 
         // In this application all devices use the same resolution,
@@ -171,16 +175,17 @@ void onewire_task(void *pvParameter)
         
         for (int i = 0; i < num_devices; ++i)
         {
-            float temp = 0;
-            ds18b20_read_temp(devices[i], &temp);
-            ESP_LOGI("one-wire", "  %d: %.3f\n", i, temp);
+            ds18b20_read_temp(devices[i], &temperature);
         }
-        vTaskDelay(1000 / portTICK_PERIOD_MS); 
+        vTaskDelay(5000 / portTICK_PERIOD_MS); 
     }
 }
 
 void app_main() {
+    ESP_ERROR_CHECK(nvs_flash_init());
 
+    // wifi_init_sta(); /* uncomment this */
+    
     // check ADC
     check_efuse();
 
@@ -197,8 +202,11 @@ void app_main() {
     esp_adc_cal_value_t val_type = esp_adc_cal_characterize(unit, atten, width, DEFAULT_VREF, adc_chars);
     print_char_val_type(val_type);
 
-    ESP_ERROR_CHECK(nvs_flash_init());
-    //xTaskCreate(&hello_task, "hello_task", 2048, NULL, 5, NULL);
     xTaskCreate(&onewire_task, "one_wire_task", 2048, NULL, 5, NULL);
     xTaskCreate(&light_intensity_task, "light_intensity_task", 2048, NULL, 5, NULL);
+
+    while(1){
+        ESP_LOGI("light-temperature", " %d lm-%.3f degrees", light_intensity, temperature);
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+    }
 }
