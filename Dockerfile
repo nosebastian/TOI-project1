@@ -1,5 +1,5 @@
 # For more information, please refer to https://aka.ms/vscode-docker-python
-FROM python:3.10-alpine
+FROM python:3.10
 
 # Keeps Python from generating .pyc files in the container
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -9,8 +9,8 @@ ENV PYTHONUNBUFFERED=1
 
 # Install pip requirements
 COPY requirements.txt .
-RUN apk update
-RUN apk add make automake gcc g++ subversion python3-dev
+#RUN apk update
+#RUN apk add make automake gcc g++ subversion python3-dev
 RUN python -m pip install -r requirements.txt
 
 WORKDIR /app
