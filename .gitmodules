@@ -1,0 +1,3 @@
+[submodule "components/esp-owb"]
+	path = components/esp-owb
+	url = https://github.com/DavidAntliff/esp32-owb.git
