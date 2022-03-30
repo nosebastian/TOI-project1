@@ -8,27 +8,19 @@
 {
     "configurations": [
         {
-            "name": "Docker: Python - General",
-            "type": "docker",
-            "request": "launch",
-            "preLaunchTask": "docker-run: debug",
-            "python": {
-                "pathMappings": [
-                    {
-                        "localRoot": "${workspaceFolder}",
-                        "remoteRoot": "/app"
-                    }
-                ],
-                "projectType": "general"
-            }
+            "name":"Python: Current File",
+            "type":"python","request":
+            "launch","program":"${file}",
+            "console":"integratedTerminal",
+            "justMyCode":true
         },
         {
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug",
-            "executable": "c:/Users/Lukas/Desktop/TOI_project/TOI-project1/.pio/build/esp32dev/firmware.elf",
+            "executable": "/home/marek/School/TOI/TOI-project1/.pio/build/esp32dev/firmware.elf",
             "projectEnvName": "esp32dev",
-            "toolchainBinDir": "C:/Users/Lukas/.platformio/packages/toolchain-xtensa32/bin",
+            "toolchainBinDir": "/home/marek/.platformio/packages/toolchain-xtensa-esp32/bin",
             "internalConsoleOptions": "openOnSessionStart",
             "preLaunchTask": {
                 "type": "PlatformIO",
@@ -39,18 +31,18 @@
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug (skip Pre-Debug)",
-            "executable": "c:/Users/Lukas/Desktop/TOI_project/TOI-project1/.pio/build/esp32dev/firmware.elf",
+            "executable": "/home/marek/School/TOI/TOI-project1/.pio/build/esp32dev/firmware.elf",
             "projectEnvName": "esp32dev",
-            "toolchainBinDir": "C:/Users/Lukas/.platformio/packages/toolchain-xtensa32/bin",
+            "toolchainBinDir": "/home/marek/.platformio/packages/toolchain-xtensa-esp32/bin",
             "internalConsoleOptions": "openOnSessionStart"
         },
         {
             "type": "platformio-debug",
             "request": "launch",
             "name": "PIO Debug (without uploading)",
-            "executable": "c:/Users/Lukas/Desktop/TOI_project/TOI-project1/.pio/build/esp32dev/firmware.elf",
+            "executable": "/home/marek/School/TOI/TOI-project1/.pio/build/esp32dev/firmware.elf",
             "projectEnvName": "esp32dev",
-            "toolchainBinDir": "C:/Users/Lukas/.platformio/packages/toolchain-xtensa32/bin",
+            "toolchainBinDir": "/home/marek/.platformio/packages/toolchain-xtensa-esp32/bin",
             "internalConsoleOptions": "openOnSessionStart",
             "loadMode": "manual"
         }

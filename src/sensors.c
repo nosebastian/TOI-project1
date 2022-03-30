@@ -11,6 +11,8 @@
   * DS on pin 4
 -----------------------*/
 
+#include "sensors.h"
+
 #include <stdio.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -178,35 +180,5 @@ void onewire_task(void *pvParameter)
             ds18b20_read_temp(devices[i], &temperature);
         }
         vTaskDelay(5000 / portTICK_PERIOD_MS); 
-    }
-}
-
-void app_main() {
-    ESP_ERROR_CHECK(nvs_flash_init());
-
-    // wifi_init_sta(); /* uncomment this */
-    
-    // check ADC
-    check_efuse();
-
-    //Configure ADC
-    if (unit == ADC_UNIT_1) {
-        adc1_config_width(width);
-        adc1_config_channel_atten(channel, atten);
-    } else {
-        adc2_config_channel_atten((adc2_channel_t)channel, atten);
-    }
-
-    //Characterize ADC
-    adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
-    esp_adc_cal_value_t val_type = esp_adc_cal_characterize(unit, atten, width, DEFAULT_VREF, adc_chars);
-    print_char_val_type(val_type);
-
-    xTaskCreate(&onewire_task, "one_wire_task", 2048, NULL, 5, NULL);
-    xTaskCreate(&light_intensity_task, "light_intensity_task", 2048, NULL, 5, NULL);
-
-    while(1){
-        ESP_LOGI("light-temperature", " %d lm-%.3f degrees", light_intensity, temperature);
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
     }
 }
