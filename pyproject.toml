@@ -9,6 +9,8 @@ python = "^3.10"
 paho-mqtt = "^1.6.1"
 numpy = "^1.22.3"
 pandas = "^1.4.1"
+schedule = "^1.1.0"
+gpiozero = "^1.6.2"
 
 [tool.poetry.dev-dependencies]
 

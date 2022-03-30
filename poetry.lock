@@ -1,4 +1,31 @@
 [[package]]
+name = "colorzero"
+version = "2.0"
+description = "Yet another Python color library"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.extras]
+doc = ["pkginfo", "sphinx", "sphinx-rtd-theme"]
+test = ["pytest", "pytest-cov"]
+
+[[package]]
+name = "gpiozero"
+version = "1.6.2"
+description = "A simple interface to GPIO devices with Raspberry Pi."
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+colorzero = "*"
+
+[package.extras]
+doc = ["sphinx", "sphinx-rtd-theme"]
+test = ["pytest", "coverage", "mock", "rpi.gpio", "pigpio"]
+
+[[package]]
 name = "numpy"
 version = "1.22.3"
 description = "NumPy is the fundamental package for array computing with Python."
@@ -53,6 +80,14 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "schedule"
+version = "1.1.0"
+description = "Job scheduling for humans."
+category = "main"
+optional = false
+python-versions = ">=3.6"
+
+[[package]]
 name = "six"
 version = "1.16.0"
 description = "Python 2 and 3 compatibility utilities"
@@ -63,9 +98,17 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "8daf501bed3cf67242ca44c895b5cfda5358d191a01abfe1cff534a085a3bb5e"
+content-hash = "84dfed8a9644db1b3df1c3851b211e1bbd358e1a49b2987e4c6bf0411d69f8ec"
 
 [metadata.files]
+colorzero = [
+    {file = "colorzero-2.0-py2.py3-none-any.whl", hash = "sha256:0e60d743a6b8071498a56465f7719c96a5e92928f858bab1be2a0d606c9aa0f8"},
+    {file = "colorzero-2.0.tar.gz", hash = "sha256:e7d5a5c26cd0dc37b164ebefc609f388de24f8593b659191e12d85f8f9d5eb58"},
+]
+gpiozero = [
+    {file = "gpiozero-1.6.2-py2.py3-none-any.whl", hash = "sha256:9af00b90d4fa775aa1fc023363e4aa5539844a5b0c461be5ced5cfabba364d99"},
+    {file = "gpiozero-1.6.2.tar.gz", hash = "sha256:0eb95a9db372146813276f92de7f43c883a3e9fe69597fc3d29c04ef3d5d5f9e"},
+]
 numpy = [
     {file = "numpy-1.22.3-cp310-cp310-macosx_10_14_x86_64.whl", hash = "sha256:92bfa69cfbdf7dfc3040978ad09a48091143cffb778ec3b03fa170c494118d75"},
     {file = "numpy-1.22.3-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:8251ed96f38b47b4295b1ae51631de7ffa8260b5b087808ef09a39a9d66c97ab"},
@@ -121,6 +164,10 @@ python-dateutil = [
 pytz = [
     {file = "pytz-2022.1-py2.py3-none-any.whl", hash = "sha256:e68985985296d9a66a881eb3193b0906246245294a881e7c8afe623866ac6a5c"},
     {file = "pytz-2022.1.tar.gz", hash = "sha256:1e760e2fe6a8163bc0b3d9a19c4f84342afa0a2affebfaa84b01b978a02ecaa7"},
+]
+schedule = [
+    {file = "schedule-1.1.0-py2.py3-none-any.whl", hash = "sha256:617adce8b4bf38c360b781297d59918fbebfb2878f1671d189f4f4af5d0567a4"},
+    {file = "schedule-1.1.0.tar.gz", hash = "sha256:e6ca13585e62c810e13a08682e0a6a8ad245372e376ba2b8679294f377dfc8e4"},
 ]
 six = [
     {file = "six-1.16.0-py2.py3-none-any.whl", hash = "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"},
