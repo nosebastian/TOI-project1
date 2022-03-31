@@ -8,16 +8,17 @@ import numpy as np
 import json
 import collections
 import gpiozero
+import subprocess
 import random
 
 ACCESS_TOKEN="22SXsHHTcI9JhN4MUWvU"
 MQTT_SERVER="147.229.12.176"
 TELEMETRY_TOPIC="v1/devices/me/telemetry"
 TOPIC_BUFFER={
-    "dev1/temp" : [],
-    "dev1/light" : [],
-    "dev2/temp" : [],
-    "dev2/light" : []
+    "/dev1/temp" : [],
+    "/dev1/light" : [],
+    "/dev2/temp" : [],
+    "/dev2/light" : []
 }
 TIME_WINDOW_S=2
 PUBLISH_LOCK=True
@@ -47,7 +48,11 @@ def publish_job(client: mqtt.Client):
     with BUFFER_LOCK:
         print("[THINGSBOARD] Publishing telemetry")
         try:
-            pi_temp = gpiozero.CPUTemperature()
+            raw_output = subprocess.check_output(
+                ["/opt/vc/bin/vcgencmd", "measure_temp"]
+            ).decode()
+            output_matching = re.search("temp=([\d\.]+)'C", raw_output)
+            return float(output_matching.group(1))
         except:
             pi_temp = 50 + 10 * random.random()
 
