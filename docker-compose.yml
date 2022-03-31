@@ -15,9 +15,6 @@ services:
       - /etc:/dockerhost/etc:ro
       - /proc:/dockerhost/proc:ro
       - /usr/lib:/dockerhost/usr/lib:ro
-    devices:
-      - "/dev/vchiq:/dev/vchiq"
-      - "/dev/vcsm:/dev/vcsm"
   mosquitto:
     image: eclipse-mosquitto:1.6
     ports:
