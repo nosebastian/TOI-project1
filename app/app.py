@@ -45,34 +45,35 @@ def on_connect_thingsboard(client, userdata, flags, rc):
 def on_publish_thingsboard(client,userdata,result):
     print("[THINGSBOARD] Data published with result code "+str(result))
 
+def temp_job():
+    try:
+        with open('/sys/class/thermal/thermal_zone0/temp') as f:
+            raw_output = f.read()
+        return float(raw_output)/1000
+    except:
+        pi_temp = 50 + 10 * random.random()
+
+    with BUFFER_LOCK:
+        TOPIC_BUFFER["/cpu/temp" ].append(pi_temp)
+
 def publish_job(client: mqtt.Client):
     print("[THINGSBOARD] Sending data")
+
+    keys={}
     with BUFFER_LOCK:
-        print("[THINGSBOARD] Publishing telemetry")
-        try:
-            with open('/sys/class/thermal/thermal_zone0/temp') as f:
-                raw_output = f.read()
-            return float(raw_output)/1000
-        except:
-            pi_temp = 50 + 10 * random.random()
-
-        keys={
-            "gateway/temp" : pi_temp
-        }
-
         for k in TOPIC_BUFFER:
             if len(TOPIC_BUFFER[k]) == 0:
                 continue
             arr = np.array(TOPIC_BUFFER[k])
             keys[k+"/median"]=np.median(arr)
             keys[k+"/average"]=np.average(arr)
-            keys[k+"/std"]=np.std(arr)
             keys[k+"/min"]=arr.min()
             keys[k+"/max"]=arr.max()
-            TOPIC_BUFFER[k].clear()
-        
-        msg_payload = json.dumps(keys, indent=4)
-        client.publish(TELEMETRY_TOPIC, msg_payload)
+            #TOPIC_BUFFER[k].clear()
+    
+    print("[THINGSBOARD] Publishing telemetry")
+    msg_payload = json.dumps(keys, indent=4)
+    client.publish(TELEMETRY_TOPIC, msg_payload)
 
 if __name__ == '__main__':
     client_local = mqtt.Client("local")
