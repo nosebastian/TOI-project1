@@ -38,42 +38,42 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 {
     ESP_LOGD(CONFIG_TAG, "Event dispatched from event loop base=%s, event_id=%d", base, event_id);
     esp_mqtt_event_handle_t event = event_data;
-    esp_mqtt_client_handle_t client = event->client;
-    int msg_id;
+    //esp_mqtt_client_handle_t client = event->client;
+    //int msg_id;
     switch ((esp_mqtt_event_id_t)event_id) {
-    case MQTT_EVENT_CONNECTED:
-        ESP_LOGI(CONFIG_TAG, "MQTT_EVENT_CONNECTED");
-        break;
-    case MQTT_EVENT_DISCONNECTED:
-        ESP_LOGI(CONFIG_TAG, "MQTT_EVENT_DISCONNECTED");
-        break;
-    case MQTT_EVENT_SUBSCRIBED:
-        ESP_LOGI(CONFIG_TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
-        break;
-    case MQTT_EVENT_UNSUBSCRIBED:
-        ESP_LOGI(CONFIG_TAG, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
-        break;
-    case MQTT_EVENT_PUBLISHED:
-        ESP_LOGI(CONFIG_TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
-        break;
-    case MQTT_EVENT_DATA:
-        ESP_LOGI(CONFIG_TAG, "MQTT_EVENT_DATA");
-        printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
-        printf("DATA=%.*s\r\n", event->data_len, event->data);
-        break;
-    case MQTT_EVENT_ERROR:
-        ESP_LOGI(CONFIG_TAG, "MQTT_EVENT_ERROR");
-        if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT) {
-            log_error_if_nonzero("reported from esp-tls", event->error_handle->esp_tls_last_esp_err);
-            log_error_if_nonzero("reported from tls stack", event->error_handle->esp_tls_stack_err);
-            log_error_if_nonzero("captured as transport's socket errno",  event->error_handle->esp_transport_sock_errno);
-            ESP_LOGI(CONFIG_TAG, "Last errno string (%s)", strerror(event->error_handle->esp_transport_sock_errno));
+        case MQTT_EVENT_CONNECTED:
+            ESP_LOGI(CONFIG_TAG, "MQTT_EVENT_CONNECTED");
+            break;
+        case MQTT_EVENT_DISCONNECTED:
+            ESP_LOGI(CONFIG_TAG, "MQTT_EVENT_DISCONNECTED");
+            break;
+        case MQTT_EVENT_SUBSCRIBED:
+            ESP_LOGI(CONFIG_TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
+            break;
+        case MQTT_EVENT_UNSUBSCRIBED:
+            ESP_LOGI(CONFIG_TAG, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
+            break;
+        case MQTT_EVENT_PUBLISHED:
+            ESP_LOGI(CONFIG_TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
+            break;
+        case MQTT_EVENT_DATA:
+            ESP_LOGI(CONFIG_TAG, "MQTT_EVENT_DATA");
+            printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
+            printf("DATA=%.*s\r\n", event->data_len, event->data);
+            break;
+        case MQTT_EVENT_ERROR:
+            ESP_LOGI(CONFIG_TAG, "MQTT_EVENT_ERROR");
+            /*if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT) {
+                log_error_if_nonzero("reported from esp-tls", event->error_handle->esp_tls_last_esp_err);
+                log_error_if_nonzero("reported from tls stack", event->error_handle->esp_tls_stack_err);
+                log_error_if_nonzero("captured as transport's socket errno",  event->error_handle->esp_transport_sock_errno);
+                ESP_LOGI(CONFIG_TAG, "Last errno string (%s)", strerror(event->error_handle->esp_transport_sock_errno));
 
-        }
-        break;
-    default:
-        ESP_LOGI(CONFIG_TAG, "Other event id:%d", event->event_id);
-        break;
+            }*/
+            break;
+        default:
+            ESP_LOGI(CONFIG_TAG, "Other event id:%d", event->event_id);
+            break;
     }
 }
 
@@ -89,3 +89,27 @@ void mqtt_init(void)
     ESP_ERROR_CHECK( esp_mqtt_client_start(client) );
 }
 
+void mqtt_publish_temp_light(char *dev, measurement_t measurement)
+{
+    char temp_str[32];
+    char light_str[32];
+
+    char dev_temp[32] = {0, };
+    char dev_light[32] = {0, };
+
+    strcat(dev_temp, dev);
+    strcat(dev_temp, "/temp");
+
+    strcat(dev_light, dev);
+    strcat(dev_light, "/light");
+
+    sprintf(temp_str, "%f", measurement.temp);
+    sprintf(light_str, "%d", measurement.light);
+
+    ESP_LOGI("MQTT", "Sending from device %s", dev);
+    ESP_LOGI("MQTT", "Sending lumens: %s", light_str);
+    ESP_LOGI("MQTT", "Sending temp:   %s", temp_str);
+
+    esp_mqtt_client_publish(client, dev_temp, temp_str, 0, 0, 0);
+    esp_mqtt_client_publish(client, dev_light, light_str, 0, 0, 0);
+}

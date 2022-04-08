@@ -10,6 +10,9 @@
         "esp_wifi.h": "c",
         "stdint.h": "c",
         "mqtt_client.h": "c",
-        "netdb.h": "c"
+        "netdb.h": "c",
+        "adc.h": "c",
+        "esp_adc_cal.h": "c",
+        "ds18b20.h": "c"
     }
 }
