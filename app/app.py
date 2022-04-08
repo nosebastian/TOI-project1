@@ -1,3 +1,4 @@
+import re
 from pip import main
 import paho.mqtt.client as mqtt 
 from datetime import datetime
@@ -15,12 +16,13 @@ ACCESS_TOKEN="22SXsHHTcI9JhN4MUWvU"
 MQTT_SERVER="147.229.12.176"
 TELEMETRY_TOPIC="v1/devices/me/telemetry"
 TOPIC_BUFFER={
-    "/dev1/temp" : [],
-    "/dev1/light" : [],
-    "/dev2/temp" : [],
-    "/dev2/light" : []
+    "/esp1/temp" : [10,10,3,5,8],
+    "/esp1/light" : [3,5,6,8,9],
+    "/esp2/temp" : [2,1,3,5,6],
+    "/esp2/light" : [9,8,2,3],
+    "/cpu/temp" : [10,56,8,96],
 }
-TIME_WINDOW_S=2
+TIME_WINDOW_S=10
 PUBLISH_LOCK=True
 BUFFER_LOCK=Lock()
 
@@ -48,11 +50,9 @@ def publish_job(client: mqtt.Client):
     with BUFFER_LOCK:
         print("[THINGSBOARD] Publishing telemetry")
         try:
-            raw_output = subprocess.check_output(
-                ["/opt/vc/bin/vcgencmd", "measure_temp"]
-            ).decode()
-            output_matching = re.search("temp=([\d\.]+)'C", raw_output)
-            return float(output_matching.group(1))
+            with open('/sys/class/thermal/thermal_zone0/temp') as f:
+                raw_output = f.read()
+            return float(raw_output)/1000
         except:
             pi_temp = 50 + 10 * random.random()
 
