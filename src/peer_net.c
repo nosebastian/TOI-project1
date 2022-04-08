@@ -1,5 +1,13 @@
+/*
+    TODO:
+        * parse data from ESPNOW packet
+        * buffer for more devices????
+*/
+
 #include "peer_net.h"
 #include "configuration.h"
+#include "mqtt.h"
+#include "sensors.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -17,11 +25,17 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+
 //marek 7c:9e:bd:38:c5:10 7c:9e:bd:38:c5:11
 //lukas 7c:9e:bd:f3:ab:d4 7c:9e:bd:f3:ab:d5
 const static uint8_t mac_1[ESP_NOW_ETH_ALEN] = { 0x7c,0x9e,0xbd,0x38,0xc5,0x11 };
 const static uint8_t mac_2[ESP_NOW_ETH_ALEN] = { 0x7c,0x9e,0xbd,0xf3,0xab,0xd5 };
+
+#ifndef CONFIG_IS_GATEWAY
 const static int  scan_list_size = 20;
+#else
+static int s_retry_num = 0;
+static EventGroupHandle_t s_wifi_event_group;
 
 static wifi_config_t wifi_config = {
     .sta = {
@@ -41,9 +55,6 @@ static wifi_config_t wifi_config = {
         },
     },
 };
-
-static int s_retry_num = 0;
-static EventGroupHandle_t s_wifi_event_group;
 
 static void wifi_event_handler(void* arg, esp_event_base_t event_base,
                                 int32_t event_id, void* event_data)
@@ -66,6 +77,7 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
         xEventGroupSetBits(s_wifi_event_group, CONFIG_ESP_WIFI_CONNECTED_BIT);
     }
 }
+#endif
 
 void add_peer(const uint8_t mac_addr[ESP_NOW_ETH_ALEN])
 {
@@ -120,7 +132,7 @@ void wifi_init(void)
     ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM) );
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
     ESP_ERROR_CHECK(esp_wifi_start());
-    int chanelRpi = 0;
+    int chanelRpi = 0; // =======================================
     for (int j = 0; j < 10 && chanelRpi == 0; j++)
     {
         esp_wifi_scan_start(NULL, true);
@@ -145,6 +157,7 @@ void wifi_init(void)
 static void espnow_send_cb(const uint8_t *mac_addr, esp_now_send_status_t status)
 {
     uint8_t primary, second;
+
     esp_wifi_get_channel(&primary, &second);
     ESP_LOGI(CONFIG_TAG, "Sending data on chanel p: %hhi s: %hhi", primary, second);
 }
@@ -155,7 +168,11 @@ static void espnow_recv_cb(const uint8_t *mac_addr, const uint8_t *data, int len
         ESP_LOGE(CONFIG_TAG, "Receive cb arg error");
         return;
     }
-    printf("Received [%d B]: %d From: "MACSTR"\n", len, *((int *)data), MAC2STR(mac_addr));
+
+    measurement_t *recieved_data = (measurement_t *)data;
+    printf("Received [%d B]: light: %d, temp: %f From: "MACSTR"\n", len, recieved_data->light, recieved_data->temp, MAC2STR(mac_addr));
+
+    mqtt_publish_temp_light("/esp2", *recieved_data);
 }
 
 void espnow_init(void)
@@ -165,8 +182,6 @@ void espnow_init(void)
     ESP_ERROR_CHECK( esp_now_register_recv_cb(espnow_recv_cb) );
     ESP_ERROR_CHECK( esp_now_set_pmk((uint8_t *)CONFIG_ESPNOW_PMK) );
 }
-
-
 
 void peer_net_task(void *pvParameter)
 {
@@ -184,15 +199,49 @@ void peer_net_task(void *pvParameter)
 void app_main(void)
 {
     ESP_ERROR_CHECK(nvs_flash_init());
+
+    // OWB init =============================
+    vTaskDelay(2000.0 / portTICK_PERIOD_MS);
+
+    // Create a 1-Wire bus, using the RMT timeslot driver
+    OneWireBus * owb;
+    owb_rmt_driver_info rmt_driver_info;
+    owb = owb_rmt_initialize(&rmt_driver_info, GPIO_DS18B20_0,
+                            RMT_CHANNEL_1, RMT_CHANNEL_0);
+    owb_use_crc(owb, true);  // enable CRC check for ROM code
+
+    DS18B20_Info * dev = ds18b20_malloc();
+    ds18b20_init_solo(dev, owb);
+    ds18b20_use_crc(dev, true);
+    ds18b20_set_resolution(dev, DS18B20_RESOLUTION);
+    // end of OWB init ======================
+
     wifi_init();
     espnow_init();
+
+    adc_init();  
 
     add_peer(mac_1);
     add_peer(mac_2);
 
-    xTaskCreate(&peer_net_task, "peer_net_task", 2048, NULL, 5, NULL);
+#ifdef CONFIG_IS_GATEWAY
+    mqtt_init();
+#endif
+
+    measurement_t measurement;
+
+    //xTaskCreate(&peer_net_task, "peer_net_task", 2048, NULL, 5, NULL);
     for(;;)
     {
+        measurement.light = light_intensity_task();
+        measurement.temp = get_temperature(dev);
+
+#ifdef CONFIG_IS_GATEWAY
+        mqtt_publish_temp_light("/esp1", measurement);
+#else
+        printf("sending...temp: %f, light: %d\n", measurement.temp, measurement.light);
+        esp_now_send(mac_2, (uint8_t *)(&measurement), sizeof(measurement_t));
+#endif
         vTaskDelay(5000 / portTICK_PERIOD_MS);
     }
 }
