@@ -1,9 +1,3 @@
-/*
-    TODO:
-        * parse data from ESPNOW packet
-        * buffer for more devices????
-*/
-
 #include "peer_net.h"
 #include "configuration.h"
 #include "mqtt.h"
@@ -41,12 +35,6 @@ static wifi_config_t wifi_config = {
     .sta = {
         .ssid = CONFIG_ESP_WIFI_SSID,
         .password = CONFIG_ESP_WIFI_PASS,
-        /* Setting a password implies station will connect to all 
-            * security modes including WEP/WPA.
-            * However these modes are deprecated and not advisable to be 
-            * used. Incase your Access point
-            * doesn't support WPA2, these mode can be enabled by commenting 
-            * below line */
         .threshold.authmode = WIFI_AUTH_WPA2_PSK,
 
         .pmf_cfg = {
@@ -65,14 +53,14 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
         if (s_retry_num < CONFIG_ESP_MAXIMUM_RETRY) {
             esp_wifi_connect();
             s_retry_num++;
-            ESP_LOGI(CONFIG_TAG, "retry to connect to the AP");
+            ESP_LOGI(WIFI_CONNECT_TAG, "retry to connect to the AP");
         } else {
             xEventGroupSetBits(s_wifi_event_group, CONFIG_ESP_WIFI_FAIL_BIT);
         }
-        ESP_LOGI(CONFIG_TAG,"connect to the AP fail");
+        ESP_LOGI(WIFI_CONNECT_TAG,"connect to the AP fail");
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
-        ESP_LOGI(CONFIG_TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
+        ESP_LOGI(WIFI_CONNECT_TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
         s_retry_num = 0;
         xEventGroupSetBits(s_wifi_event_group, CONFIG_ESP_WIFI_CONNECTED_BIT);
     }
@@ -132,45 +120,49 @@ void wifi_init(void)
     ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM) );
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
     ESP_ERROR_CHECK(esp_wifi_start());
-    int chanelRpi = 0; // =======================================
-    for (int j = 0; j < 10 && chanelRpi == 0; j++)
+    
+    // Change wifi channel to gateway
+    int channelRpi = 0;
+    for (int j = 0; j < 10 && channelRpi == 0; j++)
     {
         esp_wifi_scan_start(NULL, true);
         ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&number, ap_info));
         ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&ap_count));
-        ESP_LOGI(CONFIG_TAG, "Total APs scanned = %u", ap_count);
+        ESP_LOGI(WIFI_TAG, "Total APs scanned = %u", ap_count);
         for (int i = 0; (i < scan_list_size) && (i < ap_count); i++) {
-            ESP_LOGI(CONFIG_TAG, "SSID \t\t%s", ap_info[i].ssid);
-            ESP_LOGI(CONFIG_TAG, "RSSI \t\t%d", ap_info[i].rssi);
-            ESP_LOGI(CONFIG_TAG, "Channel \t\t%d\n", ap_info[i].primary);
+            ESP_LOGI(WIFI_TAG, "SSID \t\t%s", ap_info[i].ssid);
+            ESP_LOGI(WIFI_TAG, "RSSI \t\t%d", ap_info[i].rssi);
+            ESP_LOGI(WIFI_TAG, "Channel \t\t%d\n", ap_info[i].primary);
             if (strcmp((char *)ap_info[i].ssid, CONFIG_ESP_WIFI_SSID) == 0)
             {
-                chanelRpi = ap_info[i].primary;
+                channelRpi = ap_info[i].primary;
             }
         }
     }
-    ESP_LOGI(CONFIG_TAG, "FOUND RPI AT CHANNEL \t\t%d\n", chanelRpi);
-    ESP_ERROR_CHECK(esp_wifi_set_channel(chanelRpi, WIFI_SECOND_CHAN_NONE));
+
+    ESP_LOGI(WIFI_TAG, "Found RPi at channel \t\t%d", channelRpi);
+    ESP_ERROR_CHECK(esp_wifi_set_channel(channelRpi, WIFI_SECOND_CHAN_NONE));
 #endif
 }
 
 static void espnow_send_cb(const uint8_t *mac_addr, esp_now_send_status_t status)
 {
-    uint8_t primary, second;
+    uint8_t primary;
+    wifi_second_chan_t second;
 
     esp_wifi_get_channel(&primary, &second);
-    ESP_LOGI(CONFIG_TAG, "Sending data on chanel p: %hhi s: %hhi", primary, second);
+    ESP_LOGI(ESP_NOW_TAG, "Sending data on chanel p: %hhi s: %hhi", primary, second);
 }
 
 static void espnow_recv_cb(const uint8_t *mac_addr, const uint8_t *data, int len)
 {
     if (mac_addr == NULL || data == NULL || len <= 0) {
-        ESP_LOGE(CONFIG_TAG, "Receive cb arg error");
+        ESP_LOGE(ESPNOW_ERROR_TAG, "Receive cb arg error");
         return;
     }
 
     measurement_t *recieved_data = (measurement_t *)data;
-    printf("Received [%d B]: light: %d, temp: %f From: "MACSTR"\n", len, recieved_data->light, recieved_data->temp, MAC2STR(mac_addr));
+    ESP_LOGI(ESP_NOW_TAG, "Received [%d B]: light: %d, temp: %f From: "MACSTR, len, recieved_data->light, recieved_data->temp, MAC2STR(mac_addr));
 
     mqtt_publish_temp_light("/esp2", *recieved_data);
 }
@@ -181,19 +173,6 @@ void espnow_init(void)
     ESP_ERROR_CHECK( esp_now_register_send_cb(espnow_send_cb) );
     ESP_ERROR_CHECK( esp_now_register_recv_cb(espnow_recv_cb) );
     ESP_ERROR_CHECK( esp_now_set_pmk((uint8_t *)CONFIG_ESPNOW_PMK) );
-}
-
-void peer_net_task(void *pvParameter)
-{
-    for(uint32_t i = 0;;i++)
-    {
-        i = i%42;
-        esp_now_send(mac_1, (uint8_t *)&i, sizeof(int));
-        esp_now_send(mac_2, (uint8_t *)&i, sizeof(int));
-        //esp_now_send(mac_2, (uint8_t *)&i, sizeof(int));
-        printf("Sending %u\n", i);
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
-    }
 }
 
 void app_main(void)
@@ -230,16 +209,15 @@ void app_main(void)
 
     measurement_t measurement;
 
-    //xTaskCreate(&peer_net_task, "peer_net_task", 2048, NULL, 5, NULL);
     for(;;)
     {
-        measurement.light = light_intensity_task();
+        measurement.light = get_light_intensity();
         measurement.temp = get_temperature(dev);
 
 #ifdef CONFIG_IS_GATEWAY
         mqtt_publish_temp_light("/esp1", measurement);
 #else
-        printf("sending...temp: %f, light: %d\n", measurement.temp, measurement.light);
+        ESP_LOGI(ESP_NOW_TAG,"Sending...temp: %f, light: %d", measurement.temp, measurement.light);
         esp_now_send(mac_2, (uint8_t *)(&measurement), sizeof(measurement_t));
 #endif
         vTaskDelay(5000 / portTICK_PERIOD_MS);
