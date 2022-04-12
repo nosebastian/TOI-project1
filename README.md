@@ -79,3 +79,14 @@ Prevod napätia na lumeny je:
 Dáta sú agregované na RPi z každej minúty. Hodnoty `min`, `max`, `average`, `median` sú počítané pomocou funkcií knižnice `numpy` a odosielané pomocou MQTT na Thingsboard.
 
 ## Thingsboard.io
+Na serveri sme vytvorili užívateľa `Marek` a zariadenie `RPi-gateway`, ku ktorému je priradený. Token tohto zariadenia ďalej používame na komunikáciu MQTT medzi RPi a serverom. Na zariadenie prichádzajú dáta ako telemetrie pod rôznymi kľúčami (topicy z RPi). Štruktúra:
+```
+/esp/x/temp/yyy
+/esp/x/light/yyy
+/cpu/temp/yyy
+```
+Kde `x` je celé číslo priradené konkrétnemu esp zariadeniu a `yyy` je jedna z možností: `min`, `max`, `average`, `median`. Tieto hodnoty sú ukladané a spracovávané pomocou `rule chain`, v ktorom prebieha prevod stupňov celsia na farenheity vzťahom: 
+`Tf = (Tc * 1.8) + 32` 
+V prípade chýbajúcej hodnoty je generovaný alarm, v ktorom sa nachádzajú informácie o chýbajúcich hodnotách.
+
+Spracovnané dáta sú zobrazované v dashboarde `Log` ako kombinované čiarové grafy. V dashboarde sa taktisto zobrazujú aj aktuálne upozornenia (alarmy).
