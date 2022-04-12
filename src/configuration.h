@@ -35,17 +35,28 @@
 #define CONFIG_ESP_WIFI_CONNECTED_BIT BIT0
 #define CONFIG_ESP_WIFI_FAIL_BIT      BIT1
 
-//Others
-#define CONFIG_TAG "esp-now-toi"
-#define ESP_NOW_TAG "esp-now"
-#define MQTT_TAG "mqtt"
-#define ESPNOW_ERROR_TAG "esp-now-err"
-#define WIFI_TAG "wi-fi"
-#define WIFI_CONNECT_TAG "wifi-connect"
+// Device management
+#define CONFIG_MAX_DEVICES 10
+#define CONFIG_NAME_LENGHT 7
+#define CONFIG_DEFAULT_MIN_ID 2
+
+// Tags
+#define CONFIG_TAG "ESP-NOW-TOI"
+#define ESP_NOW_TAG "ESP-NOW"
+#define ESP_NOW_DEVICES "ESP-NOW-DEVICES"
+#define MQTT_TAG "MQTT"
+#define ESPNOW_ERROR_TAG "ESP-NOW-ERR"
+#define WIFI_TAG "WI-FI"
+#define WIFI_CONNECT_TAG "WIFI-CONNECT"
 
 // Comment this on second and more ESPs
-//#define CONFIG_IS_GATEWAY
+#define CONFIG_IS_GATEWAY
+//#define DUMMY_DEVICE
 
 #define CONFIG_BROKER_URL "mqtt://10.10.0.1"
 
+const static uint8_t master_mac[] = { 0x7c,0x9e,0xbd,0xf3,0xab,0xd5 };
+// Optional
+const static uint8_t slave_mac[] = { 0xac,0x67,0xb2,0x39,0x0b,0x88 };
+const static uint8_t marek_mac[] = { 0x7c,0x9e,0xbd,0x38,0xc5,0x11 };
 #endif

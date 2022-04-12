@@ -4,6 +4,8 @@
 
 void wifi_init(void);
 
+void new_wifi_init(void);
+
 void espnow_init(void);
 
 void add_peer(const uint8_t * mac_addr);

@@ -1,35 +1,31 @@
-#include "peer_net.h"
-#include "configuration.h"
-#include "mqtt.h"
-#include "sensors.h"
+#include <stdlib.h>
+#include <time.h>
+#include <string.h>
+#include <assert.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
-
+#include "freertos/semphr.h"
+#include "freertos/timers.h"
 #include "nvs_flash.h"
 #include "esp_event.h"
 #include "esp_netif.h"
 #include "esp_wifi.h"
-#include "esp_log.h"
 #include "esp_now.h"
 #include "esp_crc.h"
 
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+#include "configuration.h"
+#include "devices.h"
+#include "mqtt.h"
+#include "sensors.h"
 
-//marek 7c:9e:bd:38:c5:10 7c:9e:bd:38:c5:11
-//lukas 7c:9e:bd:f3:ab:d4 7c:9e:bd:f3:ab:d5
-const static uint8_t mac_1[ESP_NOW_ETH_ALEN] = { 0x7c,0x9e,0xbd,0x38,0xc5,0x11 };
-const static uint8_t mac_2[ESP_NOW_ETH_ALEN] = { 0x7c,0x9e,0xbd,0xf3,0xab,0xd5 };
+#ifdef CONFIG_IS_GATEWAY
+uint8_t actual_dev = CONFIG_DEFAULT_MIN_ID;
+device_t devices[CONFIG_MAX_DEVICES];
 
-#ifndef CONFIG_IS_GATEWAY
-const static int  scan_list_size = 20;
-#else
-static int s_retry_num = 0;
 static EventGroupHandle_t s_wifi_event_group;
+static int s_retry_num = 0;
 
 static wifi_config_t wifi_config = {
     .sta = {
@@ -67,29 +63,65 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
 }
 #endif
 
+static void espnow_send_cb(const uint8_t *mac_addr, esp_now_send_status_t status)
+{
+    uint8_t primary;
+    wifi_second_chan_t second;
+
+    esp_wifi_get_channel(&primary, &second);
+    ESP_LOGI(ESP_NOW_TAG, "Sending data on chanel p: %hhi s: %hhi", primary, second);
+}
+
+static void espnow_recv_cb(const uint8_t *mac_addr, const uint8_t *data, int len)
+{
+#ifdef CONFIG_IS_GATEWAY
+    bool exist = false;
+    int idx = check_in_devices(devices, mac_addr);
+    if (idx == -1){
+        ESP_LOGI("ESP-NOW-DEVICES", "New device detected");
+        if((actual_dev-2) >= CONFIG_MAX_DEVICES){
+            ESP_LOGI("ESP-NOW-DEVICES", "Can't add new dev /esp%d, index: %d, slots: %d", actual_dev, (actual_dev-2), CONFIG_MAX_DEVICES);
+            exist = false;
+        } else {
+            idx = actual_dev-2;
+            set_device(&devices[idx], mac_addr, actual_dev);
+            actual_dev++;
+            exist = true;
+        }
+    } else {
+        exist = true;
+    }
+
+    if(exist){
+        measurement_t *recieved_data = (measurement_t *)data;
+        ESP_LOGI(ESP_NOW_TAG, "Received [%d B]: light: %d, temp: %f From: "MACSTR, len, recieved_data->light, recieved_data->temp, MAC2STR(mac_addr));
+
+        mqtt_publish_temp_light(devices[idx].name, *recieved_data);
+    }
+#endif
+}
+
 void add_peer(const uint8_t mac_addr[ESP_NOW_ETH_ALEN])
 {
     esp_now_peer_info_t *peer = malloc(sizeof(esp_now_peer_info_t));
     memset(peer, 0, sizeof(esp_now_peer_info_t));
     peer->channel = CONFIG_ESPNOW_CHANNEL;
-    peer->ifidx = ESP_IF_WIFI_AP;
-    peer->encrypt = true;
-    memcpy(peer->lmk, CONFIG_ESPNOW_LMK, ESP_NOW_KEY_LEN);
+    peer->ifidx = ESP_IF_WIFI_STA;
+    peer->encrypt = false;
     memcpy(peer->peer_addr, mac_addr, ESP_NOW_ETH_ALEN);
     ESP_ERROR_CHECK( esp_now_add_peer(peer) );
     free(peer);
 }
 
-void wifi_init(void)
+void wifi_init()
 {
-#ifdef CONFIG_IS_GATEWAY
-    s_wifi_event_group = xEventGroupCreate();
     ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-    esp_netif_create_default_wifi_sta();
-    esp_netif_create_default_wifi_ap();
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
+#ifdef CONFIG_IS_GATEWAY
+    s_wifi_event_group = xEventGroupCreate();
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    esp_netif_create_default_wifi_sta();
     esp_event_handler_instance_t instance_any_id;
     esp_event_handler_instance_t instance_got_ip;
     ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
@@ -102,83 +134,29 @@ void wifi_init(void)
                                                         &wifi_event_handler,
                                                         NULL,
                                                         &instance_got_ip));
+#endif
     ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM) );
+    ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_STA) );
+#ifdef CONFIG_IS_GATEWAY
     ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_APSTA) );
     ESP_ERROR_CHECK( esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
-    ESP_ERROR_CHECK( esp_wifi_start());
-#else
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-    esp_netif_t *sta_netif = esp_netif_create_default_wifi_sta();
-    assert(sta_netif);
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-    uint16_t number = scan_list_size;
-    wifi_ap_record_t ap_info[scan_list_size];
-    uint16_t ap_count = 0;
-    memset(ap_info, 0, sizeof(ap_info));
-    ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM) );
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
-    ESP_ERROR_CHECK(esp_wifi_start());
-    
-    // Change wifi channel to gateway
-    int channelRpi = 0;
-    for (int j = 0; j < 10 && channelRpi == 0; j++)
-    {
-        esp_wifi_scan_start(NULL, true);
-        ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&number, ap_info));
-        ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&ap_count));
-        ESP_LOGI(WIFI_TAG, "Total APs scanned = %u", ap_count);
-        for (int i = 0; (i < scan_list_size) && (i < ap_count); i++) {
-            ESP_LOGI(WIFI_TAG, "SSID \t\t%s", ap_info[i].ssid);
-            ESP_LOGI(WIFI_TAG, "RSSI \t\t%d", ap_info[i].rssi);
-            ESP_LOGI(WIFI_TAG, "Channel \t\t%d\n", ap_info[i].primary);
-            if (strcmp((char *)ap_info[i].ssid, CONFIG_ESP_WIFI_SSID) == 0)
-            {
-                channelRpi = ap_info[i].primary;
-            }
-        }
-    }
-
-    ESP_LOGI(WIFI_TAG, "Found RPi at channel \t\t%d", channelRpi);
-    ESP_ERROR_CHECK(esp_wifi_set_channel(channelRpi, WIFI_SECOND_CHAN_NONE));
 #endif
+    ESP_ERROR_CHECK( esp_wifi_start());
 }
 
-static void espnow_send_cb(const uint8_t *mac_addr, esp_now_send_status_t status)
-{
-    uint8_t primary;
-    wifi_second_chan_t second;
-
-    esp_wifi_get_channel(&primary, &second);
-    ESP_LOGI(ESP_NOW_TAG, "Sending data on chanel p: %hhi s: %hhi", primary, second);
-}
-
-static void espnow_recv_cb(const uint8_t *mac_addr, const uint8_t *data, int len)
-{
-    if (mac_addr == NULL || data == NULL || len <= 0) {
-        ESP_LOGE(ESPNOW_ERROR_TAG, "Receive cb arg error");
-        return;
-    }
-
-    measurement_t *recieved_data = (measurement_t *)data;
-    ESP_LOGI(ESP_NOW_TAG, "Received [%d B]: light: %d, temp: %f From: "MACSTR, len, recieved_data->light, recieved_data->temp, MAC2STR(mac_addr));
-
-    mqtt_publish_temp_light("/esp2", *recieved_data);
-}
-
-void espnow_init(void)
+void espnow_init()
 {
     ESP_ERROR_CHECK( esp_now_init() );
     ESP_ERROR_CHECK( esp_now_register_send_cb(espnow_send_cb) );
     ESP_ERROR_CHECK( esp_now_register_recv_cb(espnow_recv_cb) );
-    ESP_ERROR_CHECK( esp_now_set_pmk((uint8_t *)CONFIG_ESPNOW_PMK) );
+    //ESP_ERROR_CHECK( esp_now_set_pmk((uint8_t *)CONFIG_ESPNOW_PMK) );
 }
 
-void app_main(void)
+void app_main() 
 {
     ESP_ERROR_CHECK(nvs_flash_init());
 
+#ifndef DUMMY_DEVICE
     // OWB init =============================
     vTaskDelay(2000.0 / portTICK_PERIOD_MS);
 
@@ -195,30 +173,42 @@ void app_main(void)
     ds18b20_set_resolution(dev, DS18B20_RESOLUTION);
     // end of OWB init ======================
 
+    adc_init();
+#endif
+
     wifi_init();
     espnow_init();
 
-    adc_init();  
-
-    add_peer(mac_1);
-    add_peer(mac_2);
-
 #ifdef CONFIG_IS_GATEWAY
     mqtt_init();
+
+    //set_device(&devices[0], slave_mac, CONFIG_DEFAULT_MIN_ID);
+    //ESP_LOGI("ESP-NOW-DEVICES", "Added device %d, "MACSTR", %s", devices[0].number, MAC2STR(devices[0].mac_addr), devices[0].name);
+#else
+    add_peer(master_mac);
 #endif
 
     measurement_t measurement;
-
     for(;;)
     {
+#ifndef DUMMY_DEVICE
         measurement.light = get_light_intensity();
         measurement.temp = get_temperature(dev);
+#else
+        measurement.light = 28;
+        measurement.temp = 25.5;
+#endif
 
 #ifdef CONFIG_IS_GATEWAY
-        mqtt_publish_temp_light("/esp1", measurement);
+        mqtt_publish_temp_light("/esp/1", measurement);
 #else
         ESP_LOGI(ESP_NOW_TAG,"Sending...temp: %f, light: %d", measurement.temp, measurement.light);
-        esp_now_send(mac_2, (uint8_t *)(&measurement), sizeof(measurement_t));
+        esp_err_t result = esp_now_send(master_mac, (uint8_t *)(&measurement), sizeof(measurement_t));
+        if (result == ESP_OK) {
+            printf("Sent with success\n");
+        } else {
+            printf("Error sending the data\n");
+        }
 #endif
         vTaskDelay(5000 / portTICK_PERIOD_MS);
     }

@@ -13,6 +13,8 @@
         "netdb.h": "c",
         "adc.h": "c",
         "esp_adc_cal.h": "c",
-        "ds18b20.h": "c"
+        "ds18b20.h": "c",
+        "esp_crc.h": "c",
+        "devices.h": "c"
     }
 }
