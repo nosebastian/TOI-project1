@@ -18,13 +18,9 @@ ACCESS_TOKEN="22SXsHHTcI9JhN4MUWvU"
 MQTT_SERVER="147.229.12.176"
 TELEMETRY_TOPIC="v1/devices/me/telemetry"
 TOPIC_BUFFER={
-    "/esp1/temp" : [],
-    "/esp1/light" : [],
-    "/esp2/temp" : [],
-    "/esp2/light" : [],
     "/cpu/temp" : [],
 }
-TIME_WINDOW_S=10
+TIME_WINDOW_S=60
 TEMP_MEASURE_S=2
 BUFFER_LOCK=Lock()
 
@@ -33,16 +29,18 @@ def on_connect_local(client, userdata, flags, rc):
     print("[LOCAL] Connected with result code "+str(rc))
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
-    for t in TOPIC_BUFFER:
-        print("[LOCAL] Subscribe to "+t)
-        client.subscribe(t)
+    client.subscribe('/esp/#')
 
 # The callback for when a PUBLISH message is received from the server.
 def on_message_local(client, userdata, msg):
     dat=float(msg.payload.decode('utf-8'))
+    topic_split = msg.topic.split('/')
+    new_topic=f"/{topic_split[1]}{topic_split[2]}/{topic_split[3]}"
+    if not new_topic in TOPIC_BUFFER:
+        TOPIC_BUFFER[new_topic]=[]
     with BUFFER_LOCK:
-        TOPIC_BUFFER[msg.topic].append(dat)
-    print(f"[LOCAL] {msg.topic} {dat}")
+        TOPIC_BUFFER[new_topic].append(dat)
+    print(f"[LOCAL] {msg.topic} -> {new_topic} = {dat}")
 
 def on_publish_local(client,userdata,result):
     print("[LOCAL] Data published with result code "+str(result))
