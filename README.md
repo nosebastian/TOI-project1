@@ -49,6 +49,7 @@ wpa_passphrase=abcdefgh
 wpa_key_mgmt=WPA-PSK
 wpa=2
 ```
+Hotspot bude fungovať na kanále 1.
 
 ## ESP **PlatformIO**
 
@@ -77,6 +78,15 @@ Prevod napätia na lumeny je:
 `lumens = 500/(RLDR/1000)`
 
 Dáta sú agregované na RPi z každej minúty. Hodnoty `min`, `max`, `average`, `median` sú počítané pomocou funkcií knižnice `numpy` a odosielané pomocou MQTT na Thingsboard.
+
+## Spracovanie dát na Raspberry Pi
+
+Logika spracovávania a agregácie dát je implementovaná pomocou programovacieho jazyka Python. Pre spúšťanie  prostredia s potrebnýmy knižnicami sa využíva docker container špecifikovaný v súbore `Dockerfile`. Tento image využíva Python container ako základ. Následne sú pridávané knižnice ako patho-mqtt a numpy. Implementácia celej logiky agregácie je v súbore `app/app.py`. 
+
+Script `app.py` je spúštaný v kontajnery. Script sa  pripojí na lokálny MQTT broker hostovaný v kontajnery `eclipse-mosquitto`. Broker sa využíva pre získavanie a následné publikovanie dát z ESP NOW siete. Pre spracovávanie prijatých správ sa script `app.py` prihlási na odoberanie všetkých topicov na ktoré ESP bude publikovať dáta. Topicy sú všeobecne označené ako `/esp/[číslo ESP peer]/[temp|light]`. Každá prijatá správa je následne uložená do globálneho slovníku. Slovník obsahuje názov topic a zoznam prijatých hodnôt. Po stanovenej dobe (1 minúta) sa z týchto zoznamov spočíta priemer, medián, max a min. Všetky tieto hodnoty pre každý topic a aj teplotu cpu sa následne odošlú v jednej správe na Thingsboard topic pre naše zariadenie. Jednotlivé zoznamy hodnôt sa zároveň v tomto kroku vyčistia, čím zaručujeme agregáciu hodnôt ktoré prišli na Raspberry Pi v 1 minútovom okne.
+
+Meranie teploty CPU Raspberry Pi prebieha periodickým čítaním (každé 2 sekundy) hodnoty zo súboru `/sys/class/thermal/thermal_zone0/temp`. V docker compose bolo potrebné vytvoriť mount point pre priečinok `/sys`, keďže tento súbor štandardne z kontaineru nieje prístupný.
+
 
 ## Thingsboard.io
 Na serveri sme vytvorili užívateľa `Marek` a zariadenie `RPi-gateway`, ku ktorému je priradený. Token tohto zariadenia ďalej používame na komunikáciu MQTT medzi RPi a serverom. Na zariadenie prichádzajú dáta ako telemetrie pod rôznymi kľúčami (topicy z RPi). Štruktúra:
