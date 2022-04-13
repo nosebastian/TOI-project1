@@ -32,7 +32,7 @@ ip.sh forward-on|forward-off|ip-on|ip-off DEVICE
 ```
 
 ## Raspberry Pi inštalácia **Docker**
-Pre inštaláciu docker je možné využit priložený *convenience* script ktorý sa nachádza pod `rpiscripts/rpisetup.sh`, skript bude v domovskom adresáry pokiaľ bol využitý predchádzajúci krok. Inak je potrebné tento script na raspberry pi skopírovať napríklad pomocou `scp`. Následne stačí script spustiť:
+Pre inštaláciu docker na **Raspberry Pi** je možné využit priložený *convenience* script ktorý sa nachádza v súbore `rpiscripts/rpisetup.sh`, skript **automaticky** zkopírovaný v domovskom adresáry pokiaľ bol **využitý presetup script**. V opačnom prípade je potrebné tento script na Raspberry Pi skopírovať manuálne napr. pomocou `scp`. Následne stačí script spustiť:
 ```
 ./rpisetup.sh install|docker|hotspot
     install - install docker, docker compose and reboot
@@ -87,16 +87,46 @@ Script `app.py` je spúštaný v kontajnery. Script sa  pripojí na lokálny MQT
 
 Meranie teploty CPU Raspberry Pi prebieha periodickým čítaním (každé 2 sekundy) hodnoty zo súboru `/sys/class/thermal/thermal_zone0/temp`. V docker compose bolo potrebné vytvoriť mount point pre priečinok `/sys`, keďže tento súbor štandardne z kontaineru nieje prístupný.
 
+Na Thingsboard sa následne pošle MQTT správa v **JSON** formáte:
+
+```json
+{
+    /esp[n]/temp/average: 12.3,
+    /esp[n]/temp/median: 12.2,
+    /esp[n]/temp/min: 1.23,
+    /esp[n]/temp/max: 23.4,
+    /esp[n]/light/average: 0.12,
+    /esp[n]/light/median: 0.123,
+    /esp[n]/light/min: 0.01,
+    /esp[n]/light/max: 12.3,
+    ...
+    ...
+    ...
+    /cpu/temp/average: 52.6,
+    /cpu/temp/median: 53.2,
+    /cpu/temp/min: 40.0,
+    /cpu/temp/max: 65.8,
+}
+```
+
+Kde hodnota `[n]` značí poradové číslo zariadenia ESP, štandarde bude hodnota 1 prislúchať ROOT zariadeniu (zariadenie pripojené a komunikujúce s Raspberry Pi). Ďaľšie čísla predstavujú postupne sa pripájajúce sa ostatné zariadenia v ESP NOW sieti.
 
 ## Thingsboard.io
-Na serveri sme vytvorili užívateľa `Marek` a zariadenie `RPi-gateway`, ku ktorému je priradený. Token tohto zariadenia ďalej používame na komunikáciu MQTT medzi RPi a serverom. Na zariadenie prichádzajú dáta ako telemetrie pod rôznymi kľúčami (topicy z RPi). Štruktúra:
-```
-/esp/x/temp/yyy
-/esp/x/light/yyy
-/cpu/temp/yyy
-```
-Kde `x` je celé číslo priradené konkrétnemu esp zariadeniu a `yyy` je jedna z možností: `min`, `max`, `average`, `median`. Tieto hodnoty sú ukladané a spracovávané pomocou `rule chain`, v ktorom prebieha prevod stupňov celsia na farenheity vzťahom: 
+Na serveri sme vytvorili užívateľa `Marek` a zariadenie `RPi-gateway`, ku ktorému je priradený. Token tohto zariadenia ďalej používame na komunikáciu MQTT medzi RPi a serverom. Na zariadenie prichádzajú dáta ako telemetrie pod rôznymi kľúčami (topicy z RPi). Podrobné štruktúra je v predošlej kapitole:
+
+Tieto hodnoty sú ukladané a spracovávané pomocou `rule chain`, v ktorom prebieha prevod stupňov celsia na farenheity vzťahom: 
 `Tf = (Tc * 1.8) + 32` 
 V prípade chýbajúcej hodnoty je generovaný alarm, v ktorom sa nachádzajú informácie o chýbajúcich hodnotách.
 
 Spracovnané dáta sú zobrazované v dashboarde `Log` ako kombinované čiarové grafy. V dashboarde sa taktisto zobrazujú aj aktuálne upozornenia (alarmy).
+
+## Screenshoty z riešenia
+
+V root adresáry repozitára sa zároveň nachádzajú 3 screenshoty v súboroch:
+- `screen-dockerlog.png` - Ukážka docker logu pri posielaní a príjímaní správ na Raspberry
+- `screen-esplog.png` - Ukážka komunikácia pre logovanie dát z ESP
+- `screen-tihngsboard.png` - Ukážka dashboardu v Thingsboard
+
+## Raspberry Pi, umelá záťaž a kde ju nájsť
+
+V priečinku app sa zároveň nachádza script `big_mat.py` ktorý vytvára umelú záťaž pre testovanie merania teploty na Raspberry Pi. Script počíta násobenie dvoch veľkých náhodných matíc v nekonečnej slučke.
