@@ -2,6 +2,27 @@
 Internet-of-things zariadenie merajúce teplotu a svetlo založené na ESP32. Zariadenie komunikuje pomocou MQTT. Raspberry pi je využívané ako MQTT broker a zároveň ako gateway pre prístup na server založený na [thingsboard.io](https://thingsboard.io/).
 
 # Setup
+## Inštalácia a stiahnutie požiadavkov
+Pre varzovanie projektu je využívany git, keďže je potrebné projekt odovzdať samostante ako zip, tak nieje možné ponechať originálne závistlosti pre využité knižnice. Odkazy na použité repozitáre sa nachádzajú v súbore `.gitmodules`, ide o dve knižnice a to pre one wire bus a využité tepelné čidlo
+
+Pre stiahnutie podmodulov je potrebné spustiť 2 príkazu a to:
+
+```bash
+git submodule init
+git submodule update
+```
+
+Ak by príkazy nefungovali tak je potrebné knižnice stiahnuť manuálne do priečinku `components` z odkazov:
+- [https://github.com/DavidAntliff/esp32-owb.git](https://github.com/DavidAntliff/esp32-owb.git)
+- [https://github.com/DavidAntliff/esp32-ds18b20.git](https://github.com/DavidAntliff/esp32-ds18b20.git)
+
+V priečinok `components` by následne mal mať štruktúru:
+
+- `components/`
+  - `esp32-ds18b20/`
+  - `esp32-owb/`
+
+
 ## Raspberry Pi OS
 Využitie **Raspberry Pi Imager** z linku [https://www.raspberrypi.com/software/](https://www.raspberrypi.com/software/) , odporúčanie je nainštalovať 64 bitovú Lite verziu operačného systému Raspbian. Testované konkrétne pre verziu `arm64` z dňa `2022-01-28`.
 ## Raspberry Pi device tree overlay (optional)
@@ -54,6 +75,8 @@ Hotspot bude fungovať na kanále 1.
 ## ESP **PlatformIO**
 
 Pre Platformio je najlepšie nainštalovať Visual Studio Code package `platformio.platformio-ide` prípadne je možné využiť pip package pre platformio pomocou príkazu `pip install platformio`.
+
+# Implementácia
 
 ## Sieť IoT
 Pre mesh sieť na komunikáciu medzi ESP uzlami sme použili knižnicu ESP-NOW. Jedno zariadenie je nutné zvoliť ako *master* uzol odkomentovaním:
@@ -111,7 +134,7 @@ Na Thingsboard sa následne pošle MQTT správa v **JSON** formáte:
 }
 ```
 
-Kde hodnota `[číslo ESP peer]` značí poradové číslo zariadenia ESP, štandarde bude hodnota 1 prislúchať ROOT zariadeniu (zariadenie pripojené a komunikujúce s Raspberry Pi). Ďaľšie čísla predstavujú postupne sa pripájajúce sa ostatné zariadenia v ESP NOW sieti.
+Kde hodnota `[číslo ESP peer]` značí poradové číslo zariadenia ESP, štandarde bude hodnota 1 patriť ROOT zariadeniu (zariadenie pripojené na hotspot a komunikujúce s Raspberry Pi). Ďaľšie čísla predstavujú postupne sa pripájajúce sa ostatné zariadenia v ESP NOW sieti.
 
 ## Thingsboard.io
 Na serveri sme vytvorili užívateľa `Marek` a zariadenie `RPi-gateway`, ku ktorému je priradený. Token tohto zariadenia ďalej používame na komunikáciu MQTT medzi RPi a serverom. Na zariadenie prichádzajú dáta ako telemetrie pod rôznymi kľúčami (topicy z RPi). Podrobné štruktúra je v predošlej kapitole:
@@ -128,6 +151,8 @@ V root adresáry repozitára sa zároveň nachádzajú 3 screenshoty v súboroch
 - `screen-dockerlog.png` - Ukážka docker logu pri posielaní a príjímaní správ na Raspberry Pi
 - `screen-esplog.png` - Ukážka logovania stavu z ESP
 - `screen-tihngsboard.png` - Ukážka dashboardu v Thingsboard
+
+# Zaujímavosti a detaily
 
 ## Raspberry Pi, umelá záťaž a kde ju nájsť
 
