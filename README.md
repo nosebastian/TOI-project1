@@ -83,7 +83,9 @@ Dáta sú agregované na RPi z každej minúty. Hodnoty `min`, `max`, `average`,
 
 Logika spracovávania a agregácie dát je implementovaná pomocou programovacieho jazyka Python. Pre spúšťanie  prostredia s potrebnýmy knižnicami sa využíva docker container špecifikovaný v súbore `Dockerfile`. Tento image využíva Python container ako základ. Následne sú pridávané knižnice ako patho-mqtt a numpy. Implementácia celej logiky agregácie je v súbore `app/app.py`. 
 
-Script `app.py` je spúštaný v kontajnery. Script sa  pripojí na lokálny MQTT broker hostovaný v kontajnery `eclipse-mosquitto`. Broker sa využíva pre získavanie a následné publikovanie dát z ESP NOW siete. Pre spracovávanie prijatých správ sa script `app.py` prihlási na odoberanie všetkých topicov na ktoré ESP bude publikovať dáta. Topicy sú všeobecne označené ako `/esp/[číslo ESP peer]/[temp|light]`. Každá prijatá správa je následne uložená do globálneho slovníku. Slovník obsahuje názov topic a zoznam prijatých hodnôt. Po stanovenej dobe (1 minúta) sa z týchto zoznamov spočíta priemer, medián, max a min. Všetky tieto hodnoty pre každý topic a aj teplotu cpu sa následne odošlú v jednej správe na Thingsboard topic pre naše zariadenie. Jednotlivé zoznamy hodnôt sa zároveň v tomto kroku vyčistia, čím zaručujeme agregáciu hodnôt ktoré prišli na Raspberry Pi v 1 minútovom okne.
+Script `app.py` je spúštaný v kontajnery. Script sa  pripojí na lokálny MQTT broker hostovaný v kontajnery `eclipse-mosquitto`. Broker sa využíva pre získavanie a následné publikovanie dát z ESP NOW siete. Pre spracovávanie prijatých správ sa script `app.py` prihlási na odoberanie všetkých topicov na ktoré ESP bude publikovať dáta. 
+
+Topicy sú všeobecne označené ako `/esp/[číslo ESP peer]/[temp|light]`. Každá prijatá správa je následne uložená do globálneho slovníku. Slovník obsahuje názov topic a zoznam prijatých hodnôt. Po stanovenej dobe (1 minúta) sa z týchto zoznamov spočíta priemer, medián, max a min. Všetky tieto hodnoty pre každý topic a aj teplotu cpu sa následne odošlú v jednej správe na Thingsboard topic pre naše zariadenie. Jednotlivé zoznamy hodnôt sa zároveň v tomto kroku vyčistia, čím zaručujeme agregáciu hodnôt ktoré prišli na Raspberry Pi v 1 minútovom okne.
 
 Meranie teploty CPU Raspberry Pi prebieha periodickým čítaním (každé 2 sekundy) hodnoty zo súboru `/sys/class/thermal/thermal_zone0/temp`. V docker compose bolo potrebné vytvoriť mount point pre priečinok `/sys`, keďže tento súbor štandardne z kontaineru nieje prístupný.
 
@@ -91,14 +93,14 @@ Na Thingsboard sa následne pošle MQTT správa v **JSON** formáte:
 
 ```json
 {
-    /esp[n]/temp/average: 12.3,
-    /esp[n]/temp/median: 12.2,
-    /esp[n]/temp/min: 1.23,
-    /esp[n]/temp/max: 23.4,
-    /esp[n]/light/average: 0.12,
-    /esp[n]/light/median: 0.123,
-    /esp[n]/light/min: 0.01,
-    /esp[n]/light/max: 12.3,
+    /esp[číslo ESP peer]/temp/average: 12.3,
+    /esp[číslo ESP peer]/temp/median: 12.2,
+    /esp[číslo ESP peer]/temp/min: 1.23,
+    /esp[číslo ESP peer]/temp/max: 23.4,
+    /esp[číslo ESP peer]/light/average: 0.12,
+    /esp[číslo ESP peer]/light/median: 0.123,
+    /esp[číslo ESP peer]/light/min: 0.01,
+    /esp[číslo ESP peer]/light/max: 12.3,
     ...
     ...
     ...
@@ -109,7 +111,7 @@ Na Thingsboard sa následne pošle MQTT správa v **JSON** formáte:
 }
 ```
 
-Kde hodnota `[n]` značí poradové číslo zariadenia ESP, štandarde bude hodnota 1 prislúchať ROOT zariadeniu (zariadenie pripojené a komunikujúce s Raspberry Pi). Ďaľšie čísla predstavujú postupne sa pripájajúce sa ostatné zariadenia v ESP NOW sieti.
+Kde hodnota `[číslo ESP peer]` značí poradové číslo zariadenia ESP, štandarde bude hodnota 1 prislúchať ROOT zariadeniu (zariadenie pripojené a komunikujúce s Raspberry Pi). Ďaľšie čísla predstavujú postupne sa pripájajúce sa ostatné zariadenia v ESP NOW sieti.
 
 ## Thingsboard.io
 Na serveri sme vytvorili užívateľa `Marek` a zariadenie `RPi-gateway`, ku ktorému je priradený. Token tohto zariadenia ďalej používame na komunikáciu MQTT medzi RPi a serverom. Na zariadenie prichádzajú dáta ako telemetrie pod rôznymi kľúčami (topicy z RPi). Podrobné štruktúra je v predošlej kapitole:
@@ -123,10 +125,20 @@ Spracovnané dáta sú zobrazované v dashboarde `Log` ako kombinované čiarov�
 ## Screenshoty z riešenia
 
 V root adresáry repozitára sa zároveň nachádzajú 3 screenshoty v súboroch:
-- `screen-dockerlog.png` - Ukážka docker logu pri posielaní a príjímaní správ na Raspberry
-- `screen-esplog.png` - Ukážka komunikácia pre logovanie dát z ESP
+- `screen-dockerlog.png` - Ukážka docker logu pri posielaní a príjímaní správ na Raspberry Pi
+- `screen-esplog.png` - Ukážka logovania stavu z ESP
 - `screen-tihngsboard.png` - Ukážka dashboardu v Thingsboard
 
 ## Raspberry Pi, umelá záťaž a kde ju nájsť
 
 V priečinku app sa zároveň nachádza script `big_mat.py` ktorý vytvára umelú záťaž pre testovanie merania teploty na Raspberry Pi. Script počíta násobenie dvoch veľkých náhodných matíc v nekonečnej slučke.
+
+## Manuálny rebuild docker containerov na Raspberry Pi
+
+Pri vývoji, alebo pre manuálne spustenie containerov je štanderdne potrebné spustiť znovu zostavenie kontajnerov a ich následné spustenie. Celý proces stojí na využití **docker compose v2**  pre aktualizovanie a spostenie potrebných kontainerov je následne potrebné spustiť príkazy v root repozitáru v poradí:
+
+```bash
+docker compose down
+docker compose build
+docker compose up
+```
