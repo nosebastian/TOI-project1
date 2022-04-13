@@ -116,21 +116,21 @@ Na Thingsboard sa následne pošle MQTT správa v **JSON** formáte:
 
 ```json
 {
-    /esp[číslo ESP peer]/temp/average: 12.3,
-    /esp[číslo ESP peer]/temp/median: 12.2,
-    /esp[číslo ESP peer]/temp/min: 1.23,
-    /esp[číslo ESP peer]/temp/max: 23.4,
-    /esp[číslo ESP peer]/light/average: 0.12,
-    /esp[číslo ESP peer]/light/median: 0.123,
-    /esp[číslo ESP peer]/light/min: 0.01,
-    /esp[číslo ESP peer]/light/max: 12.3,
-    ...
-    ...
-    ...
-    /cpu/temp/average: 52.6,
-    /cpu/temp/median: 53.2,
-    /cpu/temp/min: 40.0,
-    /cpu/temp/max: 65.8,
+    "/esp[číslo ESP peer]/temp/average": 12.3,
+    "/esp[číslo ESP peer]/temp/median": 12.2,
+    "/esp[číslo ESP peer]/temp/min": 1.23,
+    "/esp[číslo ESP peer]/temp/max": 23.4,
+    "/esp[číslo ESP peer]/light/average": 0.12,
+    "/esp[číslo ESP peer]/light/median": 0.123,
+    "/esp[číslo ESP peer]/light/min": 0.01,
+    "/esp[číslo ESP peer]/light/max": 12.3,
+    // ...
+    // ...
+    // ...
+    "/cpu/temp/average": 52.6,
+    "/cpu/temp/median": 53.2,
+    "/cpu/temp/min": 40.0,
+    "/cpu/temp/max": 65.8,
 }
 ```
 
