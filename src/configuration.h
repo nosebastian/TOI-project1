@@ -50,13 +50,13 @@
 #define WIFI_CONNECT_TAG "WIFI-CONNECT"
 
 // Comment this on second and more ESPs
-#define CONFIG_IS_GATEWAY
+//#define CONFIG_IS_GATEWAY
 //#define DUMMY_DEVICE
 
 #define CONFIG_BROKER_URL "mqtt://10.10.0.1"
 
 const static uint8_t master_mac[] = { 0x7c,0x9e,0xbd,0xf3,0xab,0xd5 };
-// Optional
+// 0x7c,0x9e,0xbd,0x38,0xc5,0x11
+// Optional 
 const static uint8_t slave_mac[] = { 0xac,0x67,0xb2,0x39,0x0b,0x88 };
-const static uint8_t marek_mac[] = { 0x7c,0x9e,0xbd,0x38,0xc5,0x11 };
 #endif
