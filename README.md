@@ -3,9 +3,9 @@ Internet-of-things zariadenie merajúce teplotu a svetlo založené na ESP32. Za
 
 # Setup
 ## Inštalácia a stiahnutie požiadavkov
-Pre varzovanie projektu je využívany git, keďže je potrebné projekt odovzdať samostante ako zip, tak nieje možné ponechať originálne závistlosti pre využité knižnice. Odkazy na použité repozitáre sa nachádzajú v súbore `.gitmodules`, ide o dve knižnice a to pre one wire bus a využité tepelné čidlo
+Pre verzovanie projektu je využívany git, keďže je potrebné projekt odovzdať samostante ako zip, tak nieje možné ponechať originálne závistlosti pre využité knižnice. Odkazy na použité repozitáre sa nachádzajú v súbore `.gitmodules`, ide o dve knižnice a to pre one wire bus a využité tepelné čidlo
 
-Pre stiahnutie podmodulov je potrebné spustiť 2 príkazu a to:
+Pre stiahnutie podmodulov je potrebné spustiť 2 príkazy a to:
 
 ```bash
 git submodule init
@@ -16,7 +16,7 @@ Ak by príkazy nefungovali tak je potrebné knižnice stiahnuť manuálne do pri
 - [https://github.com/DavidAntliff/esp32-owb.git](https://github.com/DavidAntliff/esp32-owb.git)
 - [https://github.com/DavidAntliff/esp32-ds18b20.git](https://github.com/DavidAntliff/esp32-ds18b20.git)
 
-V priečinok `components` by následne mal mať štruktúru:
+Priečinok `components` by následne mal mať štruktúru:
 
 - `components/`
   - `esp32-ds18b20/`
@@ -26,9 +26,9 @@ V priečinok `components` by následne mal mať štruktúru:
 ## Raspberry Pi OS
 Využitie **Raspberry Pi Imager** z linku [https://www.raspberrypi.com/software/](https://www.raspberrypi.com/software/) , odporúčanie je nainštalovať 64 bitovú Lite verziu operačného systému Raspbian. Testované konkrétne pre verziu `arm64` z dňa `2022-01-28`.
 ## Raspberry Pi device tree overlay (optional)
-V repozitári sa zároveň nachádza script `presetup.sh`, pomocou ktorého je možné nastaviť na Raspberry Pi 4 overlay pre nastavenie USB-OTG portu (USB-C) ako Ethernet Gadget. Toto umožní pripojenie Rasoberry Pi ku hosťovskému počíttaťu pomocou virtuálnej sieťovej karty.
+V repozitári sa zároveň nachádza script `presetup.sh`, pomocou ktorého je možné nastaviť na Raspberry Pi 4 overlay pre nastavenie USB-OTG portu (USB-C) ako Ethernet Gadget. Toto umožní pripojenie Rasoberry Pi ku hosťovskému počítaču pomocou virtuálnej sieťovej karty.
 
-Skript zároveň nakopíruje do domovského adresára uživateľa `/home/pi` súbor `rpisetup.sh` ktorý slúži k nainštalovanie iných požadovaných aplikácii ako je napríklad docker.
+Skript zároveň nakopíruje do domovského adresára uživateľa `/home/pi` súbor `rpisetup.sh` ktorý slúži pre nainštalovanie iných požadovaných aplikácii ako je napríklad docker.
 
 Návod na použitie `presetup.sh` scriptu 
 
@@ -39,7 +39,7 @@ presetup.sh BOOT_DIR ROOT_DIR
     ROOT_DIR - mountpoint of RPi root sector
 ```
 
-Následne je možné Raspberry Pi pripojiť pomocou USB-C káblu priamo ku hosťovskému PC, ktoré bude zároveň slúžiť aj ako zdroj. Repozitár zároveň obsahuje utilitu `ip.sh` pomocou ktorej je možné nakonfigurovať ip adresu virtuálnej sieťovej karty a prípadne nastaviť `ip_tables` pre využitie ako hosťovského počítača ako **NAT**.
+Následne je možné Raspberry Pi pripojiť pomocou USB-C káblu priamo ku hosťovskému PC, ktoré bude zároveň slúžiť aj ako zdroj. Repozitár zároveň obsahuje utilitu `ip.sh` pomocou ktorej je možné nakonfigurovať ip adresu virtuálnej sieťovej karty a prípadne nastaviť `ip_tables` pre využitie hosťovského počítača ako **NAT**.
 
 Návod na použitie `ip.sh` scriptu:
 
@@ -53,7 +53,7 @@ ip.sh forward-on|forward-off|ip-on|ip-off DEVICE
 ```
 
 ## Raspberry Pi inštalácia **Docker**
-Pre inštaláciu docker na **Raspberry Pi** je možné využit priložený *convenience* script ktorý sa nachádza v súbore `rpiscripts/rpisetup.sh`, skript **automaticky** zkopírovaný v domovskom adresáry pokiaľ bol **využitý presetup script**. V opačnom prípade je potrebné tento script na Raspberry Pi skopírovať manuálne napr. pomocou `scp`. Následne stačí script spustiť:
+Pre inštaláciu docker na **Raspberry Pi** je možné využit priložený *convenience* script ktorý sa nachádza v súbore `rpiscripts/rpisetup.sh`, skript je **automaticky** nakopírovaný do domovského adresára pokiaľ bol **využitý presetup script**. V opačnom prípade je potrebné tento script na Raspberry Pi skopírovať manuálne napr. pomocou `scp`. Následne stačí script spustiť:
 ```
 ./rpisetup.sh install|docker|hotspot
     install - install docker, docker compose and reboot
